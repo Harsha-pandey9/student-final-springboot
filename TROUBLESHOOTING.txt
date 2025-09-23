@@ -1,0 +1,70 @@
+TROUBLESHOOTING GUIDE
+====================
+
+Common Issues and Solutions:
+
+1. BUILD FAILURE - "Process terminated with exit code: 1"
+   CAUSE: Application startup failure
+   SOLUTIONS:
+   - Check if MySQL is running on localhost:3306
+   - Verify database credentials in application.properties
+   - Create database manually: CREATE DATABASE student_db;
+   - Check if port 8080 is available
+
+2. DATABASE CONNECTION ERRORS
+   CAUSE: MySQL not running or wrong credentials
+   SOLUTIONS:
+   - Start MySQL service
+   - Update password in main-app/src/main/resources/application.properties
+   - Create database: mysql -u root -p -e "CREATE DATABASE student_management_db;"
+
+3. KAFKA ERRORS (Optional)
+   CAUSE: Kafka not running
+   SOLUTIONS:
+   - Kafka is optional, application should still start
+   - To disable Kafka: set spring.kafka.enabled=false in application-dev.properties
+   - To start Kafka: Follow Kafka installation guide
+
+4. PORT CONFLICTS
+   CAUSE: Port 8080 already in use
+   SOLUTIONS:
+   - Change server.port in application.properties
+   - Kill process using port 8080: netstat -ano | findstr :8080
+
+5. CONTROLLER MAPPING CONFLICTS
+   CAUSE: Duplicate controller mappings or security configuration conflicts
+   SOLUTIONS:
+   - Check for duplicate @RequestMapping annotations
+   - Ensure only one @EnableWebSecurity configuration is active
+   - Verify no conflicting controller methods
+   - Disable Kafka if not needed: spring.kafka.enabled=false
+
+6. DEPENDENCY CONFLICTS
+   CAUSE: Multiple application.properties files
+   SOLUTIONS:
+   - Ensure only main-app has application.properties
+   - Student-module and auth-module should not have application.properties when used as dependencies
+
+HOW TO RUN:
+===========
+1. Ensure MySQL is running
+2. Run: ./run-app.bat (Windows) or ./run-app.sh (Linux/Mac)
+3. Or manually: cd main-app && mvn spring-boot:run
+
+ACCESS POINTS:
+==============
+- Main Application: http://localhost:8080
+- API Authentication: http://localhost:8080/api/auth/login
+- Student API: http://localhost:8080/api/students
+- Messages: http://localhost:8080/messages
+- Web Login (Legacy): http://localhost:8080/web/auth/login
+- Health Check: http://localhost:8080/api/auth/health
+
+DEFAULT CREDENTIALS:
+===================
+- Admin: admin/admin123 (full access)
+- Teacher: teacher/teacher123 (read access to students)
+- Student 1: student1/student123 (roll: 101, own record only)
+- Student 2: student2/student123 (roll: 102, own record only)
+- Database: root/Harsha@123 (update in application.properties if different)
+- Database Name: student_management_db (unified database for all modules)

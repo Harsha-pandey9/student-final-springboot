@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Management System - API</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        .api-section {
+            margin: 30px 0;
+            padding: 25px;
+            border-left: 4px solid #4299e1;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+        .api-section h3 {
+            color: #2d3748;
+            margin-top: 0;
+            font-size: 1.4em;
+        }
+        .endpoint {
+            margin: 15px 0;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        .method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.8em;
+            margin-right: 10px;
+            min-width: 60px;
+            text-align: center;
+        }
+        .get { background: #48bb78; color: white; }
+        .post { background: #4299e1; color: white; }
+        .put { background: #ed8936; color: white; }
+        .delete { background: #f56565; color: white; }
+        .patch { background: #9f7aea; color: white; }
+        
+        .url {
+            font-family: 'Courier New', monospace;
+            color: #2d3748;
+            font-weight: 500;
+        }
+        .description {
+            color: #718096;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .test-section {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .credentials {
+            background: #e6fffa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border: 1px solid #81e6d9;
+        }
+        .cred-item {
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #b2f5ea;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #4299e1;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #3182ce;
+        }
+        .status-info {
+            background: #fef5e7;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #f6e05e;
+            margin: 20px 0;
+        }
+        .note {
+            background: #fed7d7;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #fc8181;
+            margin: 15px 0;
+            color: #742a2a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Student Management System</h1>
+        <div class="subtitle">REST API - All endpoints start with <code>/api/</code></div>
+        
+        <div class="note">
+            <strong>⚠️ Important:</strong> This application now uses <strong>API-only endpoints</strong>. 
+            All web forms have been removed. Use API clients like Postman, curl, or the browser for JSON responses.
+        </div>
+        
+        <div class="api-section">
+            <h3>🔐 Authentication API - <code>/api/auth</code></h3>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="url">/api/auth/register</span>
+                <div class="description">Register a new user with JSON payload</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="url">/api/auth/login</span>
+                <div class="description">Login and receive JWT access token</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="url">/api/auth/profile</span>
+                <div class="description">Get current user profile (requires auth)</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="url">/api/auth/refresh</span>
+                <div class="description">Refresh access token using refresh token</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="url">/api/auth/logout</span>
+                <div class="description">Logout and invalidate tokens</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="url">/api/auth/validate</span>
+                <div class="description">Validate current token</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="url">/api/auth/health</span>
+                <div class="description">Health check for auth service</div>
+            </div>
+        </div>
+        
+        <div class="api-section">
+            <h3>📚 Student API - <code>/api/students</code></h3>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="url">/api/students</span>
+                <div class="description">List all students (role-based access)</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="url">/api/students/{id}</span>
+                <div class="description">Get student by ID</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="url">/api/students/rollno/{rollNo}</span>
+                <div class="description">Get student by roll number</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="url">/api/students/search?name={name}</span>
+                <div class="description">Search students by name (Admin/Teacher only)</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="url">/api/students/branch/{branch}</span>
+                <div class="description">Get students by branch (Admin/Teacher only)</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="url">/api/students/course/{course}</span>
+                <div class="description">Get students by course (Admin/Teacher only)</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="url">/api/students</span>
+                <div class="description">Create new student (Admin only)</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method put">PUT</span>
+                <span class="url">/api/students/{id}</span>
+                <div class="description">Update student (Admin only)</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method patch">PATCH</span>
+                <span class="url">/api/students/{id}</span>
+                <div class="description">Partial update student (Admin only)</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method delete">DELETE</span>
+                <span class="url">/api/students/{id}</span>
+                <div class="description">Delete student (Admin only)</div>
+            </div>
+        </div>
+        
+        <div class="api-section">
+            <h3>📨 Messaging API - <code>/api/messages</code></h3>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="url">/api/messages</span>
+                <div class="description">Get all messages with pagination</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="url">/api/messages/send</span>
+                <div class="description">Send a new message</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="url">/api/messages/test</span>
+                <div class="description">Send test messages</div>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method delete">DELETE</span>
+                <span class="url">/api/messages/clear</span>
+                <div class="description">Clear all messages</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🧪 Test Credentials</h3>
+            <div class="credentials">
+                <div class="cred-item"><strong>Admin:</strong> admin / admin123 (full access to all endpoints)</div>
+                <div class="cred-item"><strong>Teacher:</strong> teacher / teacher123 (read access to students)</div>
+                <div class="cred-item"><strong>Student:</strong> student1 / student123 (roll: 101, own record only)</div>
+                <div class="cred-item"><strong>Student 2:</strong> student2 / student123 (roll: 102, own record only)</div>
+            </div>
+            
+            <div style="text-align: center; margin: 20px 0;">
+                <a href="/api/auth/health" class="btn" target="_blank">Test Auth Health</a>
+                <a href="/api/students" class="btn" target="_blank">Test Students API</a>
+                <a href="/api/messages" class="btn" target="_blank">Test Messages API</a>
+            </div>
+        </div>
+        
+        <div class="status-info">
+            <h4>ℹ️ System Information</h4>
+            <p><strong>Database:</strong> student_management_db (MySQL)</p>
+            <p><strong>Port:</strong> 8080</p>
+            <p><strong>Profile:</strong> dev</p>
+            <p><strong>Kafka:</strong> Optional (localhost:9092)</p>
+            <p><strong>Architecture:</strong> Multi-module Spring Boot (API-only)</p>
+        </div>
+        
+        <div class="note">
+            <strong>📝 Usage Notes:</strong>
+            <ul>
+                <li>All endpoints return JSON responses</li>
+                <li>Authentication required for most endpoints (use Bearer token)</li>
+                <li>Use POST /api/auth/login to get access token</li>
+                <li>Include "Authorization: Bearer {token}" header for protected endpoints</li>
+                <li>Role-based access control is enforced</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
