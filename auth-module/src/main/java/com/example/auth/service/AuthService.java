@@ -18,7 +18,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Optional;
 
 /**
@@ -27,58 +29,61 @@ import java.util.Optional;
 @Service
 @Transactional
 public class AuthService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
-    
+
     @Autowired
     private authRepo userRepository;
-    
+
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
-    
+
     @Autowired
     private PasswordEncoder passwordEncoder;
-    
+
     @Autowired
     private AuthenticationManager authenticationManager;
-    
+
     @Autowired
     private JwtUtil jwtUtil;
-    
+
+    private static final SecureRandom secureRandom = new SecureRandom();
+    private static final Base64.Encoder base64Encoder = Base64.getUrlEncoder().withoutPadding();
+
+    /**
+     * Generate a 32-character random refresh token
+     */
+    public String generateRandomRefreshToken() {
+        byte[] randomBytes = new byte[24]; // 24 bytes → ~32 chars in Base64 URL encoding
+        secureRandom.nextBytes(randomBytes);
+        return base64Encoder.encodeToString(randomBytes);
+    }
+
     /**
      * Register a new user
-     * Note: For multi-module setup, student validation should be handled via API call or shared service
      */
     public AuthResponse register(RegisterRequest request) {
         try {
             logger.info("Attempting to register user: {}", request.getUsername());
-            
-            // Check if username already exists
+
             if (userRepository.existsByUsername(request.getUsername())) {
                 return AuthResponse.error("Username is already taken!");
             }
-            
-            // Check if email already exists
+
             if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
                 return AuthResponse.error("Email is already in use!");
             }
-            
-            // Check if roll number already exists in users table
+
             if (userRepository.existsByRollNo(request.getRollNo())) {
                 return AuthResponse.error("Roll number is already registered!");
             }
-            
-            // TODO: In multi-module setup, validate roll number exists in student records via API call
-            // For now, we'll skip this validation
-            
-            // Create new user
+
             User user = new User();
             user.setUsername(request.getUsername());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setEmail(request.getEmail());
             user.setRollNo(request.getRollNo());
-            
-            // Set role based on request, default to STUDENT
+
             Role userRole = Role.STUDENT;
             if (request.getRole() != null) {
                 try {
@@ -88,214 +93,157 @@ public class AuthService {
                 }
             }
             user.setRole(userRole);
-            
-            logger.info("Creating user with role: {}", userRole);
-            
-            // Save user
+
             user = userRepository.save(user);
-            
-            // Generate tokens
+
             String accessToken = jwtUtil.generateAccessToken(user);
-            String refreshToken = jwtUtil.generateRefreshToken(user);
-            
-            logger.debug("Generated access token for user {}: {}...", user.getUsername(), 
-                        accessToken.substring(0, Math.min(50, accessToken.length())));
-            logger.debug("Access token is valid: {}", jwtUtil.isValidToken(accessToken));
-            logger.debug("Access token is access type: {}", jwtUtil.isAccessToken(accessToken));
-            
-            // Save refresh token
+            String refreshToken = generateRandomRefreshToken();
+
             saveRefreshToken(user, refreshToken);
-            
-            // Create user info
-            UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(), 
-                                           user.getEmail(), user.getRollNo(), user.getRole(),
-                                           user.isEnabled(), user.isAccountNonExpired(),
-                                           user.isAccountNonLocked(), user.isCredentialsNonExpired(),
-                                           user.getCreatedAt(), user.getUpdatedAt());
-            
-            logger.info("Successfully registered user: {}", user.getUsername());
-            
-            return AuthResponse.success("User registered successfully", accessToken, refreshToken, 
-                                      jwtUtil.getAccessTokenExpirationInSeconds(), userInfo);
-            
+
+            UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(),
+                    user.getEmail(), user.getRollNo(), user.getRole(),
+                    user.isEnabled(), user.isAccountNonExpired(),
+                    user.isAccountNonLocked(), user.isCredentialsNonExpired(),
+                    user.getCreatedAt(), user.getUpdatedAt());
+
+            return AuthResponse.success("User registered successfully", accessToken, refreshToken,
+                    jwtUtil.getAccessTokenExpirationInSeconds(), userInfo);
+
         } catch (Exception e) {
             logger.error("Registration failed for user: {}", request.getUsername(), e);
             return AuthResponse.error("Registration failed: " + e.getMessage());
         }
     }
-    
+
     /**
      * Authenticate user and generate tokens
      */
     public AuthResponse login(LoginRequest request) {
         try {
-            logger.info("Attempting to authenticate user: {}", request.getUsername());
-            
-            // Authenticate user
             Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
-            
+
             User user = (User) authentication.getPrincipal();
-            
-            // Generate tokens
+
             String accessToken = jwtUtil.generateAccessToken(user);
-            String refreshToken = jwtUtil.generateRefreshToken(user);
-            
-            logger.debug("Generated access token for login user {}: {}...", user.getUsername(), 
-                        accessToken.substring(0, Math.min(50, accessToken.length())));
-            logger.debug("Login access token is valid: {}", jwtUtil.isValidToken(accessToken));
-            logger.debug("Login access token is access type: {}", jwtUtil.isAccessToken(accessToken));
-            
-            // Revoke old refresh tokens and save new one
+            String refreshToken = generateRandomRefreshToken();
+
             refreshTokenRepository.revokeAllTokensByUser(user);
             saveRefreshToken(user, refreshToken);
-            
-            // Create user info
-            UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(), 
-                                           user.getEmail(), user.getRollNo(), user.getRole(),
-                                           user.isEnabled(), user.isAccountNonExpired(),
-                                           user.isAccountNonLocked(), user.isCredentialsNonExpired(),
-                                           user.getCreatedAt(), user.getUpdatedAt());
-            
-            logger.info("Successfully authenticated user: {}", user.getUsername());
-            
-            return AuthResponse.success("Login successful", accessToken, refreshToken, 
-                                      jwtUtil.getAccessTokenExpirationInSeconds(), userInfo);
-            
+
+            UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(),
+                    user.getEmail(), user.getRollNo(), user.getRole(),
+                    user.isEnabled(), user.isAccountNonExpired(),
+                    user.isAccountNonLocked(), user.isCredentialsNonExpired(),
+                    user.getCreatedAt(), user.getUpdatedAt());
+
+            return AuthResponse.success("Login successful", accessToken, refreshToken,
+                    jwtUtil.getAccessTokenExpirationInSeconds(), userInfo);
+
         } catch (AuthenticationException e) {
-            logger.error("Authentication failed for user: {}", request.getUsername(), e);
             return AuthResponse.error("Invalid username or password");
         } catch (Exception e) {
-            logger.error("Login failed for user: {}", request.getUsername(), e);
             return AuthResponse.error("Login failed: " + e.getMessage());
         }
     }
-    
+
     /**
      * Refresh access token using refresh token
      */
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         try {
-            String refreshTokenValue = request.getRefreshToken();
-            
-            // Validate refresh token format
-            if (!jwtUtil.isValidToken(refreshTokenValue) || !jwtUtil.isRefreshToken(refreshTokenValue)) {
-                return AuthResponse.error("Invalid refresh token");
+            Optional<RefreshToken> refreshTokenOpt = refreshTokenRepository.findByToken(request.getRefreshToken());
+            if (refreshTokenOpt.isEmpty() || !refreshTokenOpt.get().isValid()) {
+                return AuthResponse.error("Refresh token is invalid or expired");
             }
-            
-            // Find refresh token in database
-            Optional<RefreshToken> refreshTokenOpt = refreshTokenRepository.findByToken(refreshTokenValue);
-            if (refreshTokenOpt.isEmpty()) {
-                return AuthResponse.error("Refresh token not found");
+
+            User user = refreshTokenOpt.get().getUser();
+            String oldAccessToken = request.getAccessToken();
+            if (oldAccessToken != null && jwtUtil.validateToken(oldAccessToken, user)) {
+                // Old token is still valid, return it
+                UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(),
+                        user.getEmail(), user.getRollNo(), user.getRole(),
+                        user.isEnabled(), user.isAccountNonExpired(),
+                        user.isAccountNonLocked(), user.isCredentialsNonExpired(),
+                        user.getCreatedAt(), user.getUpdatedAt());
+
+                return AuthResponse.success(
+                        "Token still valid, returning old token",
+                        oldAccessToken,
+                        request.getRefreshToken(),
+                        jwtUtil.getAccessTokenExpirationInSeconds(),
+                        userInfo
+                );
             }
-            
-            RefreshToken refreshToken = refreshTokenOpt.get();
-            
-            // Check if token is valid
-            if (!refreshToken.isValid()) {
-                return AuthResponse.error("Refresh token is expired or revoked");
-            }
-            
-            User user = refreshToken.getUser();
-            
-            // Generate new access token
+
+            // Old token is missing or expired → generate a new one
             String newAccessToken = jwtUtil.generateAccessToken(user);
-            
-            // Create user info
-            UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(), 
-                                           user.getEmail(), user.getRollNo(), user.getRole(),
-                                           user.isEnabled(), user.isAccountNonExpired(),
-                                           user.isAccountNonLocked(), user.isCredentialsNonExpired(),
-                                           user.getCreatedAt(), user.getUpdatedAt());
-            
-            logger.info("Successfully refreshed token for user: {}", user.getUsername());
-            
-            return AuthResponse.success("Token refreshed successfully", newAccessToken, refreshTokenValue, 
-                                      jwtUtil.getAccessTokenExpirationInSeconds(), userInfo);
-            
+
+            UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(),
+                    user.getEmail(), user.getRollNo(), user.getRole(),
+                    user.isEnabled(), user.isAccountNonExpired(),
+                    user.isAccountNonLocked(), user.isCredentialsNonExpired(),
+                    user.getCreatedAt(), user.getUpdatedAt());
+
+            return AuthResponse.success(
+                    "Token refreshed successfully",
+                    newAccessToken,
+                    request.getRefreshToken(),
+                    jwtUtil.getAccessTokenExpirationInSeconds(),
+                    userInfo
+            );
+
         } catch (Exception e) {
-            logger.error("Token refresh failed", e);
             return AuthResponse.error("Token refresh failed: " + e.getMessage());
         }
     }
-    
-    /**
-     * Logout user by revoking refresh tokens
-     */
-    public AuthResponse logout(String refreshTokenValue) {
-        try {
-            logger.info("Processing logout request with refresh token: {}", 
-                       refreshTokenValue != null ? "present" : "null");
-            
-            if (refreshTokenValue != null && !refreshTokenValue.trim().isEmpty()) {
-                logger.info("Attempting to revoke refresh token");
-                refreshTokenRepository.revokeToken(refreshTokenValue.trim());
-                logger.info("Refresh token revoked successfully");
-            } else {
-                logger.info("No refresh token provided, skipping token revocation");
-            }
-            
-            logger.info("User logged out successfully");
-            return AuthResponse.success("Logout successful", null, null, null, null);
-            
-        } catch (Exception e) {
-            logger.error("Logout failed", e);
-            // Return success even if token revocation fails
-            logger.warn("Logout completed with errors, but treating as successful");
-            return AuthResponse.success("Logout completed", null, null, null, null);
-        }
-    }
-    
+
+
     /**
      * Get user profile information
      */
     public UserInfo getUserProfile(String username) {
-        try {
-            logger.info("Getting user profile for username: {}", username);
-            
-            if (username == null || username.trim().isEmpty()) {
-                logger.warn("Username is null or empty");
-                return null;
-            }
-            
-            Optional<User> userOpt = userRepository.findByUsername(username.trim());
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
-                logger.info("User found: {}", user.getUsername());
-                
-                UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(), 
-                                  user.getEmail(), user.getRollNo(), user.getRole(),
-                                  user.isEnabled(), user.isAccountNonExpired(),
-                                  user.isAccountNonLocked(), user.isCredentialsNonExpired(),
-                                  user.getCreatedAt(), user.getUpdatedAt());
-                
-                logger.info("UserInfo created successfully for user: {}", username);
-                return userInfo;
-            } else {
-                logger.warn("User not found with username: {}", username);
-                return null;
-            }
-        } catch (Exception e) {
-            logger.error("Error getting user profile for username: {}", username, e);
-            return null;
+        Optional<User> userOpt = userRepository.findByUsername(username.trim());
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            return new UserInfo(user.getId(), user.getUsername(),
+                    user.getEmail(), user.getRollNo(), user.getRole(),
+                    user.isEnabled(), user.isAccountNonExpired(),
+                    user.isAccountNonLocked(), user.isCredentialsNonExpired(),
+                    user.getCreatedAt(), user.getUpdatedAt());
         }
+        return null;
     }
-    
+
     /**
-     * Save refresh token to database
+     * Save refresh token to DB
      */
-    private void saveRefreshToken(User user, String tokenValue) {
-        LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(jwtUtil.getRefreshTokenExpirationInSeconds());
-        RefreshToken refreshToken = new RefreshToken(tokenValue, user, expiresAt);
+    private void saveRefreshToken(User user, String refreshTokenValue) {
+        LocalDateTime expiresAt = LocalDateTime.now().plusDays(30);
+        RefreshToken refreshToken = new RefreshToken(refreshTokenValue, user, expiresAt);
         refreshTokenRepository.save(refreshToken);
     }
-    
+
+
+
     /**
-     * Clean up expired tokens (can be called by a scheduled task)
+     * Cleanup expired tokens
      */
     public void cleanupExpiredTokens() {
         refreshTokenRepository.deleteExpiredTokens(LocalDateTime.now());
-        logger.info("Cleaned up expired refresh tokens");
     }
+    public AuthResponse logout(String refreshTokenValue) {
+        try {
+            if (refreshTokenValue != null && !refreshTokenValue.trim().isEmpty()) {
+                refreshTokenRepository.revokeToken(refreshTokenValue.trim());
+            }
+            return AuthResponse.success("Logout successful", null, null, null, null);
+        } catch (Exception e) {
+            return AuthResponse.success("Logout completed", null, null, null, null);
+        }
+    }
+
+
 }

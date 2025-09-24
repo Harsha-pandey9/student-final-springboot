@@ -9,6 +9,7 @@ public class RefreshTokenRequest {
     
     @NotBlank(message = "Refresh token is required")
     private String refreshToken;
+    private String accessToken;
     
     // Default constructor
     public RefreshTokenRequest() {}
@@ -21,6 +22,8 @@ public class RefreshTokenRequest {
     // Getters and Setters
     public String getRefreshToken() { return refreshToken; }
     public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+    public String getAccessToken() { return accessToken; }
+    public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
     
     @Override
     public String toString() {
