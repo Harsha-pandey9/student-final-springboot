@@ -17,52 +17,45 @@ import jakarta.annotation.PostConstruct;
  */
 @Service("authModuleCustomUserDetailsService")
 public class CustomUserDetailsService implements UserDetailsService {
-    
+
     // Constructor to verify bean creation
     public CustomUserDetailsService() {
         System.out.println("✅ CustomUserDetailsService bean created successfully!");
     }
-    
+
     private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
-    
+
     @Autowired
     private authRepo authRepository;
-    
-    @PostConstruct
-    public void init() {
-        System.out.println("✅ CustomUserDetailsService fully initialized with authRepository!");
-        System.out.println("✅ Bean name: authModuleCustomUserDetailsService");
-        System.out.println("✅ Ready to handle authentication requests");
-    }
-    
+
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         logger.debug("Loading user by username: {}", username);
-        
+
         User user = authRepository.findByUsernameOrEmail(username)
                 .orElseThrow(() -> {
                     logger.error("User not found with username or email: {}", username);
                     return new UsernameNotFoundException("User not found with username or email: " + username);
                 });
-        
+
         logger.debug("Successfully loaded user: {}", user.getUsername());
         return user;
     }
-    
+
     /**
      * Load user by ID (useful for JWT token validation)
      */
     @Transactional
     public UserDetails loadUserById(Long id) {
         logger.debug("Loading user by ID: {}", id);
-        
+
         User user = authRepository.findById(id)
                 .orElseThrow(() -> {
                     logger.error("User not found with ID: {}", id);
                     return new UsernameNotFoundException("User not found with ID: " + id);
                 });
-        
+
         logger.debug("Successfully loaded user by ID: {}", user.getUsername());
         return user;
     }

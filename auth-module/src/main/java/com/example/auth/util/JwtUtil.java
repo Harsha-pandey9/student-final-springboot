@@ -10,7 +10,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
+import java.security.SecureRandom;
+import java.util.Base64;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
@@ -29,12 +30,11 @@ public class JwtUtil {
     @Value("${jwt.secret:mySecretKey123456789012345678901234567890}")
     private String jwtSecret;
     
-    @Value("${jwt.access-token-expiration:1800000}") // 30 minutes
+    @Value("${jwt.access-token-expiration:60000}") // 1 min
     private Long accessTokenExpiration;
-    
+
     @Value("${jwt.refresh-token-expiration:2592000000}") // 30 days
     private Long refreshTokenExpiration;
-    
     /**
      * Get signing key for JWT
      */
@@ -59,17 +59,7 @@ public class JwtUtil {
         
         return createToken(claims, userDetails.getUsername(), accessTokenExpiration);
     }
-    
-    /**
-     * Generate refresh token
-     */
-    public String generateRefreshToken(UserDetails userDetails) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("tokenType", "REFRESH");
-        claims.put("type", "refresh"); // Keep for backward compatibility
-        return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
-    }
-    
+
     /**
      * Create JWT token
      */
@@ -178,16 +168,17 @@ public class JwtUtil {
     /**
      * Validate token against user details
      */
-    public Boolean validateToken(String token, UserDetails userDetails) {
+    public boolean validateToken(String token, UserDetails userDetails) {
         try {
             final String username = extractUsername(token);
-            return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
-        } catch (JwtException e) {
+            return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
             logger.error("Token validation failed: {}", e.getMessage());
             return false;
         }
     }
-    
+
+
     /**
      * Validate token format and signature
      */
@@ -222,26 +213,7 @@ public class JwtUtil {
             return false;
         }
     }
-    
-    /**
-     * Check if token is refresh token
-     */
-    public Boolean isRefreshToken(String token) {
-        try {
-            Claims claims = extractAllClaims(token);
-            // Check new format first, then fall back to old format
-            String tokenType = claims.get("tokenType", String.class);
-            if (tokenType != null) {
-                return "REFRESH".equals(tokenType);
-            }
-            // Backward compatibility
-            return "refresh".equals(claims.get("type"));
-        } catch (JwtException e) {
-            logger.error("Error checking token type: {}", e.getMessage());
-            return false;
-        }
-    }
-    
+
     /**
      * Check if token is access token
      */
@@ -282,9 +254,9 @@ public class JwtUtil {
     /**
      * Get refresh token expiration time in seconds
      */
-    public Long getRefreshTokenExpirationInSeconds() {
-        return refreshTokenExpiration / 1000;
-    }
+//    public Long getRefreshTokenExpirationInSeconds() {
+//        return refreshTokenExpiration / 1000;
+//    }
     
     // ========== USER CONTEXT UTILITY METHODS ==========
     

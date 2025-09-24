@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(scanBasePackages = {
     "com.example.config",      // Main app config
-    "com.example.controller",   // Main app controllers  
+    "com.example.controller",   // Main app controllers
     "com.example.service",     // Main app services
     "com.example.model",       // Main app models
     "com.example.event",       // Event classes
