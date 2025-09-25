@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface StudentRepository extends JpaRepository<Student, Long> {
     
     // Find student by roll number
-    Optional<Student> findByRollNo(Integer rollNo);
+    Optional<Student> findByRollNo(Integer userRollNo);
     
     // Find students by branch
     List<Student> findByBranch(String branch);
