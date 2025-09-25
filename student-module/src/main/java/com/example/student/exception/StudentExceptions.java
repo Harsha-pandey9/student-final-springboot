@@ -13,10 +13,10 @@ public class StudentExceptions {
         
         private final Long studentId;
         
-        public StudentNotFoundException(Long studentId) {
-            super("Student not found with ID: " + studentId);
-            this.studentId = studentId;
-        }
+        // public StudentNotFoundException(Integer rollNo) {
+        //     super("Student not found with ID: " + rollNo);
+        //     this.studentId = rollNo;
+        // }
         
         public StudentNotFoundException(String message) {
             super(message);
@@ -28,6 +28,11 @@ public class StudentExceptions {
             this.studentId = null;
         }
         
+        public StudentNotFoundException(Long id) {
+            this.studentId = null;
+            //TODO Auto-generated constructor stub
+        }
+
         public Long getStudentId() {
             return studentId;
         }
